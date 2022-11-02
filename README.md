@@ -5,6 +5,9 @@ The general goal of this program and the person who uses it is to update the iri
 
 There are some minor changes between the iris_dark_trend_fix.pro file used locally and the one used at LMSAL. Copy the latest iris_dark_trend_fix_VXX.pro file and update for the file to be sent to LMSAL. Update the iris_dark_trend_fix.pro for local use. Both need to be updated after each model change or refit. 
 
+Output directory in “check_ave_pixel_subpro” is set to the previous location in the default (Github) version of the script. This needs to be changed to a local directory before it can be run correctly. 
+Currently set as odir = “Volumes/Pegasus/….” and should be set to local directory where it will run
+
 For historical (i.e. human reasons) the directory structure hides the true function of this program.
 Primarily the directory now exists to test the long term trending of the IRIS pedestal dark level,
 which was first noticed to be discrepant from the launch model in ~June 2014.

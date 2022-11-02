@@ -1,5 +1,6 @@
 Long term dark analysis
 =======================
+Previous and outdated version at: https://github.com/jprchlik/find_contaminated_darks
 
 The general goal of this program and the person who uses it is to update the iris_dark_trend.pro file and send it to LMSAL to be used in the IRIS data processing pipeline. To correctly update this file, the processor must run this code, look at it with the GUI, make the correct adjustments to our model, then incorporate those adjustment into the iris_dark_trend.pro file so that is can be used 
 

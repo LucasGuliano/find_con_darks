@@ -1,6 +1,10 @@
-# find_con_darks
 Long term dark analysis
 =======================
+
+The general goal of this program and the person who uses it is to update the iris_dark_trend.pro file and send it to LMSAL to be used in the IRIS data processing pipeline. To correctly update this file, the processor must run this code, look at it with the GUI, make the correct adjustments to our model, then incorporate those adjustment into the iris_dark_trend.pro file so that is can be used 
+
+There are some minor changes between the iris_dark_trend_fix.pro file used locally and the one used at LMSAL. Copy the latest iris_dark_trend_fix_VXX.pro file and update for the file to be sent to LMSAL. Update the iris_dark_trend_fix.pro for local use. Both need to be updated after each model change or refit. 
+
 For historical (i.e. human reasons) the directory structure hides the true function of this program.
 Primarily the directory now exists to test the long term trending of the IRIS pedestal dark level,
 which was first noticed to be discrepant from the launch model in ~June 2014.
@@ -12,13 +16,13 @@ Please ensure the entry on the calendar is correctly labeled (Calib 3: Dark), sh
 
 Using the last set of observed dark times, the dark files are download from JSOC using the drms module (get_dark_files.py)
 
-The code initially places the level1 dark files in /data/alisdair/IRIS_LEVEL1_DARKS/YYYY/MM/(simpleB or complexA; depending on OBSID) and renames the files to adhere to previous standards.
+The code initially places the level1 dark files in /data/alisdair/IRIS_LEVEL1_DARKS/YYYY/MM/(simpleB or complexA; depending on OBSID) and renames the files to adhere to previous standards. This is the standard at SAO and is dictated by the parameter file. If this needs to be changed, it should be done in the parameter file. 
 
 Next, run_dark_checks converts the level1 files to level0 darks (do_lev1to0_darks.pro) for a given month and moves them to the level0 directory.
 
 Then the script checks for darks significantly affected by SAAs or transient particle hits (find_contaminated_darks.pro; i.e. too many 5 sigma hot pixels for a Gaussian distribution.).
 
-This step runs in parallel, which requires that you add par_commands to your IDL start up via the enviromental variable IDL_PATH in .cshrc or your .idl_startup file.
+This step runs in parallel, which requires that you add par_commands to your IDL start up via the environmental variable IDL_PATH in .cshrc or your .idl_startup file.
 
 Next, download the temperature files for the day darks are observed plus +/- 1 day and format the output temperature file for IDL.
 
@@ -30,9 +34,9 @@ After the pedestal analysis finishes,  the code runs the hot pixel analysis.
 The hot pixel analysis counts the number of Hot (5&sigma; pixels) in the level 1 IRIS observations.
 For more information navigate to the IRIS_dark_and_hot_pixel sub-folder and read the README.md inside.
 
-The program works automaticaly because the plots output to the 'Z' window in IDL. Therefore, the job maybe cronned.
+The program works automatically because the plots output to the 'Z' window in IDL. Therefore, the job maybe cronned.
 
-My process_darks.csh looks like the following:
+A general process_darks.csh can look like the following:
 
 >#/bin/tcsh  
 >setenv PYTHONPATH /PathToMyPythonLibrary/personaladditions/code/python  
@@ -40,34 +44,36 @@ My process_darks.csh looks like the following:
 >setenv /PathToMyCondaPythonLibrary/lib/python2.7/site-packages:${PYTHONPATH}  
 >source $HOME/.cshrc  
 >source $HOME/.cshrc.user  
->cd /MyPegasusDirectory/iris/find_con_darks/  
+>cd /LOCATION/iris/find_con_darks/  
 >./run_dark_checks.csh  
 
 Overview Recalibration Procedure 
 --------------
-If you notice the dark trend does not represent the dark pedestal measurements well (~ 2 sigma) for a couple months in a row,
-then you need to do a recalibration of the dark pedestal.
+If you notice the dark trend does not represent the dark pedestal measurements well (~ 2 sigma) for a couple months in a row, then you need to do a recalibration of the dark pedestal.
 
-Starting in 2022, a new methodology was developed for the IRIS darks. Rather than updating the parameters for the entire mission, parameters were separated. 
+Starting in 2022, a new methodology was developed for the IRIS darks. Rather than updating the parameters for the entire mission, parameters were separated. Parameters before the separation were locked in and no longer are adjusted. Parameters after adhere to a new model and are free to adjust. 
 
-Model A: Covers from the start of the mission through July 8th, 2020.
-Model B: Covered from July 9th, 2020 moving forward. 
+Model A: Covers from the start of the mission through July 8th, 2020. 
+Model B: Covers from July 9th, 2020 moving forward. (New models may be added)
 
 YOU SHOULD NEVER NEED TO MODIFY PARAMETERS FOR PREVIOUS MODEL VERSIONS, ONLY CURRENT MODEL VERSION AND VERSIONS GOING FORWARD!
 
-To create a new model sepration, update the parameters in the fit_ports_gui python file and the iris_dark_trend_fix files:
-* Optimize and lock in (never change) the parameters for the current model
-* Create a new Model_X_parameters.txt file for the new parameters
-* Create a new entry in the fit_ports_gui file to read in the new parameters and a time for the switch to happen
-* Create the new model below the previous one in the GUI file, run to ensure everything looks correct
-* Match the format in the iris_dark_trend_fix file to start with the new model at the chosen time
+General model refit:
+Run run_dark_checks.csh to add the new darks and analyze the trend
+Run the python_fit_ports GUI and modify the parameters or create a new model to improve the trend
+Update initial_parameter.txt
+Copy the new parameters into calc_trend_darks/iris_dark_trend_fix.pro to create file to send to calibration team
+Run dark_trend.pro and format_for_steve.pro to obtain the new plots (or get new plots from GUI)
+Send the new plots, an updated iris_dark_trend_fix.pro, and tentative report to the local dark pedestal curator (probably you)
+When the report is approved send it to iris_calib, attach new iris_dark_trend_fix_VXX.pro if model has changed
 
-Run run_dark_checks.csh to add the new darks and analyze the trend    
-Run the python_fit_ports GUI and modify the parameters or create a new model to improve the trend         
-Update initial_parameter.txt and copy the parameters also in calc_trend_darks/iris_dark_trend_fix.pro    
-Run dark_trend.pro and format_for_steve.pro to obtain the new plots    
-Send the new plots, an updated iris_dark_trend_fix.pro, and tentative report to the local dark pedestal curator    
-When the report is approved send it to iris_calib    
+To create a new model separation, update the parameters in the fit_ports_gui python file and the iris_dark_trend_fix files:
+
+Optimize and lock in (never change) the parameters for the current model
+Create a new Model_X_parameters.txt file for the new parameters
+Create a new entry in the fit_ports_gui file to read in the new parameters and a time for the switch to happen
+Create the new model below the previous one in the GUI file, run to ensure everything looks correct
+Match the format in the iris_dark_trend_fix file to start with the new model at the chosen time
 
 
 run_dark_checks.csh
@@ -98,7 +104,6 @@ Now if you run python quick_script.py --noauth_local_webserver it will immediate
 
 After you verify the code as detailed on the webpage, 
 copy the token.json to client_secret.json and ~/.credentials/calendar-python-quickstart.json. 
-
 
 
 find_dark_runs.py
@@ -150,8 +155,8 @@ The program assumes the darks are located in ~~/data/alisdair/IRIS_LEVEL1_DARKS/
 which is why the python program downloads the files there.
 The level 1 to level 0 conversion is small and mostly rotates the image using the sswidl function iris_lev120_darks.
 Currently, the program is set to output to a dummy directory because saving to a network directory from IDL can 
-cause hangs in my experience.
-Therefore, I create the files locally then immediately move them in the script to the output directory specified in line 3 of the parameter file.
+cause hangs.
+Therefore, it creates the files locally and then immediately move them in the script to the output directory specified in line 3 of the parameter file.
 
 
 find_contaminated_darks
@@ -179,33 +184,8 @@ If you assume a Gaussian distribution we would expect that fraction to be 6.E-5,
 so we assume the 5 sigma Gaussian fraction to reject images with fraction higher than the Gaussian value.
 Finally, the program writes the file name, start time of integration, whether it passed (1 is passed 0 is failed),
  total pixels above the 5 sigma level normalized by exposure time, and the integration time to a file.
-The output file is formated NUV(or FUV)_YYYY_MM.txt.
-So far the Gaussian fraction prediects 12 months are contaminated by SAAs, since the start of IRIS.
-
-I include an example output from September, 2016, which we know is contaminated by SAA from 18:09:11 to 18:26:12.
- What we find is the SAA only contributed significantly from 18:14:49 to 18:20:52.
-
-2016/09 Number Pass = 68 (90.6667%)
-
-|                     file  |                time  |  pass   | total5  | exptime |
-| ------------------------- |--------------------- | ------- | ------- | ------- |
-|  NUV20160921_180506.fits  | 2016/09/21T18:05:06  |     1   |     20  |    5.02 |
-|  NUV20160921_180552.fits  | 2016/09/21T18:05:52  |     1   |     30  |   30.02 |
-|  NUV20160921_180937.fits  | 2016/09/21T18:09:37  |     1   |     10  |    0.05 |
-|  NUV20160921_180949.fits  | 2016/09/21T18:09:49  |     1   |      8  |    1.02 |
-|  NUV20160921_181006.fits  | 2016/09/21T18:10:06  |     1   |     26  |    5.02 |
-|  NUV20160921_181052.fits  | 2016/09/21T18:10:52  |     1   |     25  |   30.02 |
-|  NUV20160921_181437.fits  | 2016/09/21T18:14:37  |     1   |     41  |    0.05 |
-|  NUV20160921_181449.fits  | 2016/09/21T18:14:49  |     0   |    251  |    1.02 |
-|  NUV20160921_181506.fits  | 2016/09/21T18:15:06  |     0   |    207  |    5.02 |
-|  NUV20160921_181552.fits  | 2016/09/21T18:15:52  |     0   |    185  |   30.02 |
-|  NUV20160921_181937.fits  | 2016/09/21T18:19:37  |     0   |    640  |    0.05 |
-|  NUV20160921_181949.fits  | 2016/09/21T18:19:49  |     0   |   1319  |    1.02 |
-|  NUV20160921_182006.fits  | 2016/09/21T18:20:06  |     0   |    667  |    5.02 |
-|  NUV20160921_182052.fits  | 2016/09/21T18:20:52  |     0   |    260  |   30.02 |
-|  NUV20160921_182437.fits  | 2016/09/21T18:24:37  |     1   |     35  |    0.05 |
-|  NUV20160921_182449.fits  | 2016/09/21T18:24:49  |     1   |     68  |    1.02 |
-|  NUV20160921_182506.fits  | 2016/09/21T18:25:06  |     1   |     48  |    5.02 |
+The output file is formatted NUV(or FUV)_YYYY_MM.txt.
+So far the Gaussian fraction predicts 12 months are contaminated by SAAs, since the start of IRIS.
 
 temps/get_list_of_days.py
 -------------------------
@@ -218,7 +198,7 @@ Finally, it formats the file to just the important temperatures so IDL calls it 
 
 calc_trend_darks/dark_trend
 ---------------------------
-The final component is the plotting of the dark trend with the average dark values for a given month overplotted.
+The final component is the plotting of the dark trend with the average dark values for a given month over-plotted.
 The program to run the fix is dark_trend.pro and has a simple syntax, which specifies whether to run the trend on the simpleB 
 (/simpleb) darks.
 An example follows:
@@ -331,5 +311,4 @@ quad : float
     The quadratic coefficient explaining the increase in the pedestal level.     
 off:  float    
     The intercept for the quadratic and linear function    
-
 

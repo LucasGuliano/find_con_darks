@@ -30,7 +30,7 @@ class gui_dark(Tk.Frame):
 
     def __init__(self,parent):
         """
-        Program to fit the long term evolution of the IRIS pedestal. Hopefully this program is static and you can run the GUI with the following command:
+        Program to fit the long term evolution of the IRIS pedestal.
         tcsh>python fit_ports_gui.py
         However, there will be times when this code should be modified. For example, following a prolonged bake out like the one from June 13-15, 2018.
         In that case the code modification will still be small and the exact functions you will need to edit will be specified below.
@@ -53,23 +53,32 @@ class gui_dark(Tk.Frame):
 
         UPDATED BY LRG end of 2021 to improve readability and implement new variable.
 
-        V2 NOTES:
-        THE MODEL IS NO LONGER CONTINUOUS! Version 2 of this GUI treats the model as two seperate parts.
+        V3 NOTES:
+        THE MODEL IS NO LONGER CONTINUOUS! Version 3 of this GUI treats the model in seperate parts. 
         MODEL A covers early mission data. These parameters are locked in and in the Model_A_Parameters.txt file
-        This GUI will NOT adjust parameters for Model A, as these should not be changed. 
-        MODEL B covers data moving forward. These parameters can be adjusted by this GUI and are in the Model_B_Parameters.txt file. 
-
+        It is now planned that the model will be seperated every so often and parameters will no longer be adjusted for the past. 
+        This GUI will NOT adjust parameters for previous models, as these should not be changed. 
+        
+        ***Please see the 'Model_Seperation_README" file for instruction on how to create a new model segment.***
+        
+        Models describe the following time periods:
         MODEL A: 2014 to July 8th, 2020 23:59:59
-        MODEL B: July 9th, 2020 to NOW
+        MODEL B: July 9th, 2020 to December 31st, 2021
+        MODEL C: January 1st, 2022 to December 31st, 2022
         
         """
         Tk.Frame.__init__(self,parent,background='white') #create initial frame with white background
 
         #dictionary of initial Guess parameters (Manually update with the previous version of trend fix 
-        self.gdict = {}
+        #This should always be utilized for parameters related to the CURRENT model
+        self.current_dict = {}
 
         #create a variable which switch to true after creating a plot once
         self.lat_plot = False
+        
+        #@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@#
+        # A) PARAMETER READ IN SECTION      #
+        #@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@#
         
 ###################  FIRST SET OF PARAMETERS ############################
 # From 2014 to 20220709
@@ -96,13 +105,11 @@ class gui_dark(Tk.Frame):
         Afile.close()    
         
 ###################    Model B    #####################
-        #input guess file for Model B
-        #COPY THIS BLOCK FOR NEW MODEL SEPERATION
-        gfile = open('Model_B_Parameters.txt','r')
-
+        #dictionary of MODEL B parameters (DO NOT ADJUST. THESE ARE NOW LOCKED IN)
+        self.B_dict = {}
+        Bfile = open('Model_B_Parameters.txt','r')
         #read input parameters from file
-        for i,line in enumerate(gfile):
-           
+        for i,line in enumerate(Bfile):
             #remove whitespace and brackets
             line = line.replace(' ','').replace('[','').replace(']','')
             #Use the header to label all the columns
@@ -111,19 +118,15 @@ class gui_dark(Tk.Frame):
             else:
                 sline = line.split('=')
                 #create parameter lis for dictionary input
-                self.gdict[sline[0]] = [float(j) for j in sline[1].split(',')]
-
+                self.B_dict[sline[0]] = [float(j) for j in sline[1].split(',')]
         #close parameter file
-        gfile.close()
+        Bfile.close()
 
 ###################    Model C    #####################
-        #input guess file for Model B
-        #COPY THIS BLOCK FOR NEW MODEL SEPERATION
-        gfile = open('Model_C_Parameters.txt','r')
-
+        #When adding new model, change this dict from current_dict to LETTER_dict
+        Cfile = open('Model_C_Parameters.txt','r')
         #read input parameters from file
-        for i,line in enumerate(gfile):
-           
+        for i,line in enumerate(Cfile):
             #remove whitespace and brackets
             line = line.replace(' ','').replace('[','').replace(']','')
             #Use the header to label all the columns
@@ -132,13 +135,17 @@ class gui_dark(Tk.Frame):
             else:
                 sline = line.split('=')
                 #create parameter lis for dictionary input
-                self.gdict[sline[0]] = [float(j) for j in sline[1].split(',')]
-
+                self.current_dict[sline[0]] = [float(j) for j in sline[1].split(',')]
         #close parameter file
-        gfile.close()        
+        Cfile.close()        
         
         
 #######################################################################
+
+        #@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@#
+        # B) TIMING SECTION                #
+        #@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@#  
+      
         #IDL utilizes anytim with a Jan 1st 1979 start time
         #Data times here are generated with a Jan 1st 1979 start in mind
         #Python utilizes a Jan 1st 1970 start time
@@ -184,23 +191,24 @@ class gui_dark(Tk.Frame):
         #################################################################
         self.seperation_B = 1.31025595e+09  #2020/07/08 11:59:59pm
         
-        #################################################################
-        #                     @@@@@@@@@@
+        ############s#####################################################
         #                     Start of Model C                          #
         #                       01/01/2022                              #
         #################################################################
-        self.seperation_C = 1.3569984e+09  #2022/01/01 12:00:00am
+        self.seperation_C = 1.3069984e+09  #2022/01/01 12:00:00am
+        
+        #self.seperation_C = 1.3085052e+09  #2021/06/01
         ################################################
 
         #basic set of keys
-        self.b_keys = sorted(self.gdict.keys())
+        self.current_keys = sorted(self.current_dict.keys())
         #add min and max parameters (Default no restriction)
-        for i in self.b_keys:
-            self.gdict[i+'_min'] = [-np.inf]*len(self.gdict[i])
-            self.gdict[i+'_max'] = [ np.inf]*len(self.gdict[i])
+        for i in self.current_keys:
+            self.current_dict[i+'_min'] = [-np.inf]*len(self.current_dict[i])
+            self.current_dict[i+'_max'] = [ np.inf]*len(self.current_dict[i])
 
         #set up initial dictionary of guesses
-        self.idict = self.gdict.copy()
+        self.idict = self.current_dict.copy()
 
         #initialize scaling limit variable
         self.sc_limit = None
@@ -342,7 +350,7 @@ class gui_dark(Tk.Frame):
 
         #set up check boxes for which ports to refit
         self.check_box = {}
-        for i in self.b_keys:
+        for i in self.current_keys:
             self.check_box[i+'_val'] = Tk.IntVar()
             self.check_box[i] = Tk.Checkbutton(master=self,text=i.upper(),variable=self.check_box[i+'_val'],onvalue=1,offvalue=0,command=self.refit_list_com)
             self.check_box[i].pack(side=Tk.LEFT,padx=0.1,pady=5)
@@ -381,15 +389,15 @@ class gui_dark(Tk.Frame):
         Tk.Label(frame,textvariable=Tk.StringVar(value='PORT'),height=1,width=5).grid(row=0,column=len(self.plis)+3)
         #Add a column to separate  NUV and FUV
         Tk.Label(frame,textvariable=Tk.StringVar(value='  '),height=1,width=5).grid(row=0,column=len(self.plis)+2)
-       # loop over string containing all the gdict keys (i.e. port names)
-        for m,i in enumerate(self.b_keys):
+       # loop over string containing all the current_dict keys (i.e. port names)
+        for m,i in enumerate(self.current_keys):
             txt = Tk.StringVar()
             txt.set(i.upper())
 
             #If NUV Put in the second column
             if 'nuv' in i:  
                 r = int(i.replace('nuv',''))-1
-                col = len(self.gdict[i])+3
+                col = len(self.current_dict[i])+3
             #If FUV put in the first column
             else:
                 col = 0
@@ -404,10 +412,10 @@ class gui_dark(Tk.Frame):
             self.dscr[i] = Tk.Label(frame,textvariable=txt,height=1,width=5).grid(row=3*r+1,column=col)
                      
             #loop over all columns (parameters) for each port
-            for c,j in enumerate(self.gdict[i]):
+            for c,j in enumerate(self.current_dict[i]):
                 inp_val = Tk.StringVar(value='{0:10}'.format(j))
-                inp_max = Tk.StringVar(value='{0:10}'.format(self.gdict[i+'_max'][c]))
-                inp_min = Tk.StringVar(value='{0:10}'.format(self.gdict[i+'_min'][c]))
+                inp_max = Tk.StringVar(value='{0:10}'.format(self.current_dict[i+'_max'][c]))
+                inp_min = Tk.StringVar(value='{0:10}'.format(self.current_dict[i+'_min'][c]))
    
                 #create input text
                 self.ivar[i+'_'+self.plis[c]+'_min'] = Tk.Entry(frame,textvariable=inp_min,width=12)
@@ -428,7 +436,7 @@ class gui_dark(Tk.Frame):
     #update the port values in the GUI
     def update_port_vals(self):  
        """
-       This function updates the parameter text in the GUI based on the parameter in the gdict class. 
+       This function updates the parameter text in the GUI based on the parameter in the current_dict class. 
        This function will call after you refit a parameter and accept the new parameter values.
        Args
        ------
@@ -440,10 +448,10 @@ class gui_dark(Tk.Frame):
            None
        """
        #loop over all columns (parameters) for each port
-       for c,j in enumerate(self.gdict[i]):
+       for c,j in enumerate(self.current_dict[i]):
            inp_val = '{0:10}'.format(j)
-           inp_max = '{0:10}'.format(self.gdict[i+'_max'][c])
-           inp_min = '{0:10}'.format(self.gdict[i+'_min'][c])
+           inp_max = '{0:10}'.format(self.current_dict[i+'_max'][c])
+           inp_min = '{0:10}'.format(self.current_dict[i+'_min'][c])
    
            #create input text
            #self.ivar[i+'_'+self.plis[c]+'_min'].set(inp_min)
@@ -451,7 +459,7 @@ class gui_dark(Tk.Frame):
            #self.ivar[i+'_'+self.plis[c]+'_max'].set(inp_max)
 
 
-    #Update parameters in gdict with percentage limit
+    #Update parameters in current_dict with percentage limit
     def set_limt_param(self,onenter):
         """
         This function will set the parameter limits after updating the range value in the lower right text box.
@@ -473,19 +481,19 @@ class gui_dark(Tk.Frame):
         #scale parameters value
         self.sc_limit = float(self.val_per.get().replace(' ',''))/100.
 
-       # loop over string containing all the gdict keys (i.e. port names)
-        for m,i in enumerate(self.b_keys):
+       # loop over string containing all the current_dict keys (i.e. port names)
+        for m,i in enumerate(self.current_keys):
             #loop over all parameters and update values (remove all white space before converting to float
-            for c,j in enumerate(self.gdict[i]):
+            for c,j in enumerate(self.current_dict[i]):
                #skip frozen parameters
                if self.p_code['{0:1d}'.format(c)] not in self.freeze_list: 
-                   self.gdict[i+'_min'][c] = self.gdict[i][c]-np.abs(self.sc_limit*self.gdict[i][c])
-                   self.gdict[i+'_max'][c] = self.gdict[i][c]+np.abs(self.sc_limit*self.gdict[i][c])
+                   self.current_dict[i+'_min'][c] = self.current_dict[i][c]-np.abs(self.sc_limit*self.current_dict[i][c])
+                   self.current_dict[i+'_max'][c] = self.current_dict[i][c]+np.abs(self.sc_limit*self.current_dict[i][c])
 
         #update parameters shown in the boxes
         self.iris_show()
 
-    #Update parameters in gdict base on best fit values
+    #Update parameters in current_dict base on best fit values
     def get_iris_param(self,onenter):
         """
         This function will get the parameter limits from the parameter text boxes and update them in the fitting dictionary.
@@ -504,13 +512,13 @@ class gui_dark(Tk.Frame):
         #needs to be done otherwise key strokes will not work
         self.f.canvas._tkcanvas.focus_set()
 
-       # loop over string containing all the gdict keys (i.e. port names)
-        for m,i in enumerate(self.b_keys):
+       # loop over string containing all the current_dict keys (i.e. port names)
+        for m,i in enumerate(self.current_keys):
             #loop over all parameters and update values (remove all white space before converting to float
-            for c,j in enumerate(self.gdict[i]):
-               self.gdict[i][c] = float(self.ivar[i+'_'+self.plis[c]+'_med'].get().replace(' ','')) 
-               self.gdict[i+'_min'][c] = float(self.ivar[i+'_'+self.plis[c]+'_min'].get().replace(' ','')) 
-               self.gdict[i+'_max'][c] = float(self.ivar[i+'_'+self.plis[c]+'_max'].get().replace(' ','')) 
+            for c,j in enumerate(self.current_dict[i]):
+               self.current_dict[i][c] = float(self.ivar[i+'_'+self.plis[c]+'_med'].get().replace(' ','')) 
+               self.current_dict[i+'_min'][c] = float(self.ivar[i+'_'+self.plis[c]+'_min'].get().replace(' ','')) 
+               self.current_dict[i+'_max'][c] = float(self.ivar[i+'_'+self.plis[c]+'_max'].get().replace(' ','')) 
 
 
     #Update shown parameters base on new best fit
@@ -526,29 +534,29 @@ class gui_dark(Tk.Frame):
         --------
             None
         """
-       # loop over string containing all the gdict keys (i.e. port names)
-        for m,i in enumerate(self.b_keys):
+       # loop over string containing all the current_dict keys (i.e. port names)
+        for m,i in enumerate(self.current_keys):
             #loop over all parameters and update values
-            for c,j in enumerate(self.gdict[i]):
+            for c,j in enumerate(self.current_dict[i]):
                self.ivar[i+'_'+self.plis[c]+'_min'].delete(0,'end')
                self.ivar[i+'_'+self.plis[c]+'_med'].delete(0,'end')
                self.ivar[i+'_'+self.plis[c]+'_max'].delete(0,'end')
 
                #set formatting based on output value
-               if abs(self.gdict[i][c]) < .001:
+               if abs(self.current_dict[i][c]) < .001:
                    dfmt = '{0:10.5e}'
-               elif abs(self.gdict[i][c]) > 10000.:
+               elif abs(self.current_dict[i][c]) > 10000.:
                    dfmt = '{0:10.1f}'
-               elif abs(self.gdict[i][c]) == 0:
+               elif abs(self.current_dict[i][c]) == 0:
                    dfmt = '{0:10d}'
                else:
                    dfmt = '{0:10.5f}'
 
                #update in text box
-               #self.ivar[i+'_'+self.plis[c]+'_med'].insert(0,dfmt.format(self.gdict[i][c]))
-               self.ivar[i+'_'+self.plis[c]+'_min'].insert(0,dfmt.format(self.gdict[i+'_min'][c]))
-               self.ivar[i+'_'+self.plis[c]+'_med'].insert(0,dfmt.format(self.gdict[i][c]))
-               self.ivar[i+'_'+self.plis[c]+'_max'].insert(0,dfmt.format(self.gdict[i+'_max'][c]))
+               #self.ivar[i+'_'+self.plis[c]+'_med'].insert(0,dfmt.format(self.current_dict[i][c]))
+               self.ivar[i+'_'+self.plis[c]+'_min'].insert(0,dfmt.format(self.current_dict[i+'_min'][c]))
+               self.ivar[i+'_'+self.plis[c]+'_med'].insert(0,dfmt.format(self.current_dict[i][c]))
+               self.ivar[i+'_'+self.plis[c]+'_max'].insert(0,dfmt.format(self.current_dict[i+'_max'][c]))
          
     #set up data for plotting 
     def iris_dark_set(self):
@@ -595,6 +603,12 @@ class gui_dark(Tk.Frame):
 
             #LRG Added 2022 for testing purposes, can print out yearly averages and data for comparison
             ##################### FOR DATA ANALYSIS #############################
+            #Print data points and times:
+            '''print('FUV2 Data:')
+            for entry in range(len(self.fdata['fuv2'][1])):             
+                print(datetime.fromtimestamp(284014800+time[entry]).strftime("%m/%d/%Y %I:%M"))    
+                print(self.fdata['fuv2'][1][entry])'''
+                
             '''y14 = range(0,7)
             y15 = range(8,19)
             y16 = range(19,32)
@@ -606,8 +620,6 @@ class gui_dark(Tk.Frame):
             y22 = range(97, 103)
             all_years =[y14, y15, y16, y17, y18, y19, y20, y21, y22]'''
          
-         
-        
         '''print(self.fdata['fuv3'][1])
             for dta in self.fdata['fuv3'][1]:
                 print(dta)
@@ -633,10 +645,7 @@ class gui_dark(Tk.Frame):
                     print('NNUV1 MED: '+str(np.median(self.fdata['fuv2'][1][yrs])))
                     print('NUV1 MIN: '+str(np.round(np.min(self.fdata['nuv1'][1][yrs]),2)))
                     print('NUV1 MIN: '+str(np.round(np.max(self.fdata['nuv1'][1][yrs]),2)))
-
-
         exit()'''
-            
             ########################################################
 
     #plot the best fit data
@@ -694,27 +703,29 @@ class gui_dark(Tk.Frame):
             self.cport= i 
 
             #get variance in best fit model
-            var = self.get_var(i,self.gdict[i])
+            var = self.get_var(i,self.current_dict[i])
             #get offset in last data point
-            last = self.get_last(i,self.gdict[i])
+            last = self.get_last(i,self.current_dict[i])
             
-            '''ttt = dat[0]
-            for t in range(0, len(ttt)-1):
-                converted = float(ttt[t]+self.convert+self.t0dict[i])
-                ttt[0][t] = datetime.fromtimestamp(converted)'''
+            '''times = dat[0]
+            for t in range(0, len(times)-1):
+                converted = float(times[t]+self.convert+self.t0dict[i])
+                times[0][t] = datetime.fromtimestamp(converted)'''
             
-
             #Uploaded best fit
             #current dark time plus a few hours
-            ptim = np.linspace(self.fdata[i][0].min(),self.fdata[i][0].max()+1e3,500)
-            #plot values currently in gdict for best fit values (store in dictionary for updating line)
-            self.bline[i] = self.wplot[i[:-1]].plot(ptim,self.offset(ptim,*self.gdict[i]),color=self.fdata[i][3],label='{0}(Unc.) = {1:5.4f}'.format(i,var)) 
+            #ptim = np.linspace(self.fdata[i][0].min(),self.fdata[i][0].max()+1e3,500)
+            
+            # OR LRG UPDATED, added plot for next cycle to show where data is going
+            ptim = np.linspace(self.fdata[i][0].min(),self.fdata[i][0].max()+2e7,500)
+            
+            #plot values currently in current_dict for best fit values (store in dictionary for updating line)
+            self.bline[i] = self.wplot[i[:-1]].plot(ptim,self.offset(ptim,*self.current_dict[i]),color=self.fdata[i][3],label='{0}(Unc.) = {1:5.4f}'.format(i,var)) 
 
             #plot each port
             self.sdata[i] = ax.scatter(dat[0],dat[1],color=dat[3],marker=dat[4],label='{0}(last) = {1:3.2f}'.format(i,last))
             ax.errorbar(dat[0],dat[1],yerr=dat[2],color=dat[3],fmt=dat[4],label=None)
  
-
         #add legend
         for i in self.wplot.keys():
             self.wplot[i].legend(loc='upper left',frameon=True)
@@ -722,7 +733,6 @@ class gui_dark(Tk.Frame):
             fancy_plot(self.wplot[i])
 
         self.canvas.draw()
-
 
     #get variance in the model
     def get_var(self,port,parm):
@@ -766,8 +776,8 @@ class gui_dark(Tk.Frame):
         last = np.sqrt(((self.fdata[port][1]-self.offset(self.fdata[port][0],*parm))**2.))[-1]
         return last
 
- ################################################################################################################
-#                               CURRENT MODEL
+################################################################################################################
+#                                MODEL
 ################################################################################################################       
 
     #Pedestal offset model
@@ -781,9 +791,9 @@ class gui_dark(Tk.Frame):
 
         Model B utilizes only the 8 main paramters.
 
-        Parameters from Model A are locked in and no longer adjsuted.
+        Parameters from Model A and B are locked in and no longer adjsuted.
 
-        Parameters from Model B are adjustable through this GUI. 
+        Current model C is still adjustable
         
         Args
         ------
@@ -827,9 +837,15 @@ class gui_dark(Tk.Frame):
         trend: float
             The value of the trend at each t0 for a given set of parameters.
         """
-        
-        #Define the Model A parameters for earlier frozen model (DO NOT ADJUST PARAMETERS)
+        #Determine the port in order to get the correct parameter values
         port = (self.cport)
+        
+        #@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@#
+        # C) MODEL PARAMETERS SECTION       #
+        #@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@#
+        
+        ####################### PARAMETERS FOR MODEL A ######################
+        #Read in the the Model A parameters (DO NOT ADJUST PARAMETERS)
         A_amp1 = self.A_dict[port][0]
         A_amp2 = self.A_dict[port][1]
         A_p1 = self.A_dict[port][2]
@@ -842,10 +858,30 @@ class gui_dark(Tk.Frame):
         A_bo_drop = self.A_dict[port][9]
         A_sc_amp = self.A_dict[port][10]
         A_ns_incr = self.A_dict[port][11]
-
+        
+        ####################### PARAMETERS FOR MODEL B ######################
+        #Read in the the Model B parameters (DO NOT ADJUST PARAMETERS)
+        B_amp1 = self.B_dict[port][0]
+        B_amp2 = self.B_dict[port][1]
+        B_p1 = self.B_dict[port][2]
+        B_phi1 = self.B_dict[port][3]
+        B_phi2 = self.B_dict[port][4]
+        B_lin = self.B_dict[port][5]
+        B_quad = self.B_dict[port][6]
+        B_off = self.B_dict[port][7]
+        
         #constant on period term
         c = 2.*np.pi
         dtq = dt0-self.dtq0[self.ptype]
+        
+        #@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@#
+        # D) MODEL TRENDS SECTION       #
+        #@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@#
+        
+        ################################################################################################################
+        #                       MODEL A                                        #
+        ################################################################################################################
+     
         #do not add quadratic term before start time
         dtq[dtq < 0.] = 0.
 
@@ -890,17 +926,26 @@ class gui_dark(Tk.Frame):
         #Trend after the non-standard operations between Oct. 27th and Dec. 15 2018
         trend[post_ns] = (trend+incr_trend_offset)[post_ns]
         
-        
         ################################################################################################################
         #                       MODEL B STARTING 2020/07/09                                          #
         ################################################################################################################
         #All times after July, 9th 2020 are handlded by a seperate model of the same form, but with unique variables
-        model_b_start = [(dt0 > self.seperation_B - self.t0dict[self.cport])]
+        model_B_start = [(dt0 > self.seperation_B - self.t0dict[self.cport]) & (dt0 < self.seperation_C - self.t0dict[self.cport])]
         #New trend takes the same form as the orignal model, just with new parameter values
-        B_trend = (amp1*np.sin(c*(dt0/p1+phi1)))+(amp2*np.sin(c*(dt0/(p1/2.)+phi2)))+(lin*(dt0))+(quad*(dt0**2.00))+(off)
+        B_trend = (B_amp1*np.sin(c*(dt0/B_p1+B_phi1)))+(B_amp2*np.sin(c*(dt0/(B_p1/2.)+B_phi2)))+(B_lin*(dt0))+(B_quad*(dt0**2.00))+(B_off)
         
         #Trend from 2020/07/09 forward 
-        trend[model_b_start] = B_trend[model_b_start]
+        trend[model_B_start] = B_trend[model_B_start]
+        
+        ################################################################################################################
+        #                       MODEL C STARTING 2022/01/01                                          #
+        ################################################################################################################
+        model_C_start = [(dt0 >= self.seperation_C - self.t0dict[self.cport])]
+        #New trend takes the same form as the orignal model, just with new parameter values
+        C_trend = (amp1*np.sin(c*(dt0/p1+phi1)))+(amp2*np.sin(c*(dt0/(p1/2.)+phi2)))+(lin*(dt0))+(quad*(dt0**2.00))+(off)
+        
+        #Trend from 2020/07/09 forward 
+        trend[model_C_start] = C_trend[model_C_start]
 
         ################################################################################################################
         #                       ADD NEW MODEL BELOW FOLLOWING FORMAT ABOVE                                    #
@@ -919,15 +964,14 @@ class gui_dark(Tk.Frame):
     ##########################################################################
         
         print('      {0:10},{1:10},{2:15},{3:10},{4:10},{5:20},{6:20},{7:10}'.format('Amp1','Amp2','P1','Phi1','Phi2','Lin','Quad','Offset'))
-        for i in self.b_keys:
-            print('{0}=[{1:^10.5f},{2:^10.5f},{3:^15.4e},{4:^10.5f},{5:^10.5f},{6:^20.9e},{7:^20.9e},{8:^10.5f}]'.format(i,*self.gdict[i]))
-
+        for i in self.current_keys:
+            print('{0}=[{1:^10.5f},{2:^10.5f},{3:^15.4e},{4:^10.5f},{5:^10.5f},{6:^20.9e},{7:^20.9e},{8:^10.5f}]'.format(i,*self.current_dict[i]))
 
     #refit list (i.e. which ports should you refit)
     def refit_list_com(self):
         self.f.canvas._tkcanvas.focus_set()
         #check which boxes are checked 
-        for i in self.b_keys:
+        for i in self.current_keys:
             #if checked and not in list update the list 
             if ((self.check_box[i+'_val'].get() == 1) and (i not in self.refit_list)):
                 self.refit_list.append(i)
@@ -941,7 +985,7 @@ class gui_dark(Tk.Frame):
             #if not checked and not in list do nothing
             else:
                 continue
-
+            
     #parameter freeze list
     def freeze_list_com(self):
         #allows you to get back to the main part of the GUI
@@ -956,9 +1000,9 @@ class gui_dark(Tk.Frame):
             if ((self.freeze_box[i+'_val'].get() == 1) and (i not in self.freeze_list)):
                 self.freeze_list.append(i)
                 #set selected limit to 0.0001* of primary value
-                for j in self.b_keys:
-                    self.gdict[j+'_min'][m] = self.gdict[j][m]-np.abs(self.fr_limit*self.gdict[j][m])
-                    self.gdict[j+'_max'][m] = self.gdict[j][m]+np.abs(self.fr_limit*self.gdict[j][m])
+                for j in self.current_keys:
+                    self.current_dict[j+'_min'][m] = self.current_dict[j][m]-np.abs(self.fr_limit*self.current_dict[j][m])
+                    self.current_dict[j+'_max'][m] = self.current_dict[j][m]+np.abs(self.fr_limit*self.current_dict[j][m])
             #if freezeed and already in the list continue 
             elif ((self.freeze_box[i+'_val'].get() == 1) and (i in self.freeze_list)):
                 continue
@@ -969,12 +1013,12 @@ class gui_dark(Tk.Frame):
 
                 #set to global limit if sc_limit is set
                 if isinstance(self.sc_limit,float):
-                    for j in self.b_keys:
-                        self.gdict[j+'_min'][m] = self.gdict[j][m]-np.abs(self.sc_limit*self.gdict[j][m])
-                        self.gdict[j+'_max'][m] = self.gdict[j][m]+np.abs(self.sc_limit*self.gdict[j][m])
+                    for j in self.current_keys:
+                        self.current_dict[j+'_min'][m] = self.current_dict[j][m]-np.abs(self.sc_limit*self.current_dict[j][m])
+                        self.current_dict[j+'_max'][m] = self.current_dict[j][m]+np.abs(self.sc_limit*self.current_dict[j][m])
                 else: 
                     #set unselected limit to infinity
-                    for j in self.b_keys: self.gdict[j+'_min'][m],self.gdict[j+'_max'][m] = -np.inf,np.inf
+                    for j in self.current_keys: self.current_dict[j+'_min'][m],self.current_dict[j+'_max'][m] = -np.inf,np.inf
             #if not freezeed and not in list do nothing
             else: continue
 
@@ -984,9 +1028,9 @@ class gui_dark(Tk.Frame):
     def refit(self):
         #refit for every model in refit list
         for i in self.refit_list:
-            guess = self.gdict[i]
-            mins  = self.gdict[i+'_min']
-            maxs  = self.gdict[i+'_max']
+            guess = self.current_dict[i]
+            mins  = self.current_dict[i+'_min']
+            maxs  = self.current_dict[i+'_max']
             dt0   = self.fdata[i][0]
             port  = self.fdata[i][1]
             errs  = self.fdata[i][2]
@@ -1000,19 +1044,23 @@ class gui_dark(Tk.Frame):
             popt, pcov = curve_fit(self.offset,dt0,port,p0=guess,sigma=errs,bounds=(mins,maxs),xtol=1e-10) 
  
             #temporary line plot
-            ptim = np.linspace(self.fdata[i][0].min(),self.fdata[i][0].max()+1e3,500)
+            #ptim = np.linspace(self.fdata[i][0].min(),self.fdata[i][0].max()+1e3,500)
+            
+            # OR LRG UPDATED, added plot for next cycle to showw where data is going
+            ptim = np.linspace(self.fdata[i][0].min(),self.fdata[i][0].max()+2e7,500)
+            
             t_line, = self.wplot[i[:-1]].plot(ptim,self.offset(ptim,*popt),'--',color=self.fdata[i][3]) 
             self.canvas.draw()
            
             #get model variance 
-            old_var = self.get_var(i,self.gdict[i])
+            old_var = self.get_var(i,self.current_dict[i])
             new_var = self.get_var(i,popt)
 
             #Ask if you should update the new parameter for a given fit
             if box.askyesno('Update','Should the Dark Trend Update for {0} (dashed line)?\n $\sigma$(old,new) = ({1:5.4f},{2:5.4f})'.format(i.upper(),old_var,new_var)):
                                       
                 #update with new fit values
-                self.gdict[i] = popt
+                self.current_dict[i] = popt
                 #update strings in GUI
 
             #remove temp line
@@ -1027,10 +1075,9 @@ class gui_dark(Tk.Frame):
             
     #resets parameter guesses
     def reset(self):
-        self.gdict = self.idict.copy()
+        self.current_dict = self.idict.copy()
         self.iris_show()
         #self.update_port_vals()
-
 
 #Exits the program
     def onExit(self):
@@ -1038,7 +1085,6 @@ class gui_dark(Tk.Frame):
        plt.close()
        self.quit()
        self.parent.destroy()
-
 
 #Tells Why Order information is incorrect
     def onError(self):
@@ -1063,7 +1109,6 @@ def main():
     root.option_add("*Font", default_font)
     root.option_add("*Font", default_font)
     root.mainloop()
-
 
 if __name__=="__main__":
 #create root frame

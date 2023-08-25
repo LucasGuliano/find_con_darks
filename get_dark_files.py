@@ -14,6 +14,19 @@ import drms
 from shutil import move
 import glob
 
+# Added by LRG 2023/04 to ignore the server not having the proper certificate which was halting downloads
+#Don't check certificate
+import ssl
+
+try:
+   _create_unverified_https_context = ssl._create_unverified_context
+except AttributeError:
+    # Legacy Python that doesn't verify HTTPS certificates by default
+    pass
+else:
+    # Handle target environment that doesn't support HTTPS verification
+    ssl._create_default_https_context = _create_unverified_https_context
+
 ###Remove proxy server variables from Lockheed after using the proxy server to connect to the google calendar 2019/02/20 J. Prchlik
 ##os.environ.pop("http_proxy" )
 ##os.environ.pop("https_proxy")
@@ -171,7 +184,7 @@ class dark_times:
 #set up JSOC query for darks
     def dark_query(self):
 #use drms module to download from JSOC (https://pypi.python.org/pypi/drms)
-        client = drms.Client(email=self.email,verbose=False)
+        client = drms.Client(email=self.email,verbose=True)
         fmt = '%Y.%m.%d_%H:%M'
         self.qstr = 'iris.lev1[{0}_TAI-{1}_TAI][][? IMG_TYPE ~ "DARK" ?]'.format(self.sta_dark_dt.strftime(fmt),self.end_dark_dt.strftime(fmt)) 
         self.expt = client.export(self.qstr)

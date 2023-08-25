@@ -24,7 +24,7 @@ if ($splt[1] != 'FAILED') then
     echo ${sidl_levz}
 endif
 
-    #find_con_darks_no_thread, 01, 2022, type='NUV',logdir='log/',outdir='txtout/',/sim,sdir='/data/alisdair/opabina/scratch/joan/iris/newdat/orbit/level0/'
+    #find_con_darks_no_thread, 08, 2023, type='NUV',logdir='log/',outdir='txtout/',/sim,sdir='/data/alisdair/opabina/scratch/joan/iris/newdat/orbit/level0/'
     #find_con_darks, MM, YYYY, type='FUV',logdir='log/',outdir='txtout/',/sim,sdir='/data/alisdair/opabina/scratch/joan/iris/newdat/orbit/level0/'
     sswidl -e "find_con_darks_no_thread,"${dday}",type='NUV',logdir='log/',outdir='txtout/',/sim,sdir="${sidl_levz}
     sswidl -e "find_con_darks_no_thread,"${dday}",type='FUV',logdir='log/',outdir='txtout/',/sim,sdir="${sidl_levz}

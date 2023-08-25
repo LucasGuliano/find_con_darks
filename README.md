@@ -1,13 +1,9 @@
 Long term dark analysis
 =======================
-Previous and outdated version at: https://github.com/jprchlik/find_contaminated_darks
 
 The general goal of this program and the person who uses it is to update the iris_dark_trend.pro file and send it to LMSAL to be used in the IRIS data processing pipeline. To correctly update this file, the processor must run this code, look at it with the GUI, make the correct adjustments to our model, then incorporate those adjustment into the iris_dark_trend.pro file so that is can be used 
 
 There are some minor changes between the iris_dark_trend_fix.pro file used locally and the one used at LMSAL. Copy the latest iris_dark_trend_fix_VXX.pro file and update for the file to be sent to LMSAL. Update the iris_dark_trend_fix.pro for local use. Both need to be updated after each model change or refit. 
-
-Output directory in “check_ave_pixel_subpro” is set to the previous location in the default (Github) version of the script. This needs to be changed to a local directory before it can be run correctly. 
-Currently set as odir = “Volumes/Pegasus/….” and should be set to local directory where it will run
 
 For historical (i.e. human reasons) the directory structure hides the true function of this program.
 Primarily the directory now exists to test the long term trending of the IRIS pedestal dark level,
@@ -53,12 +49,13 @@ A general process_darks.csh can look like the following:
 
 Overview Recalibration Procedure 
 --------------
-If you notice the dark trend does not represent the dark pedestal measurements well (~ 2 sigma) for a couple months in a row, then you need to do a recalibration of the dark pedestal.
+Standard procedure is now to update dark model on an annual basis. However, if you notice the dark trend does not represent the dark pedestal measurements (~ 2 sigma) for a couple months in a row, then you need to do a recalibration of the dark pedestal in between cycles. 
 
 Starting in 2022, a new methodology was developed for the IRIS darks. Rather than updating the parameters for the entire mission, parameters were separated. Parameters before the separation were locked in and no longer are adjusted. Parameters after adhere to a new model and are free to adjust. 
 
 Model A: Covers from the start of the mission through July 8th, 2020. 
-Model B: Covers from July 9th, 2020 moving forward. (New models may be added)
+Model B: Covers from July 9th, 2020 through December 2021. 
+Model C: Covers all of 2022. 
 
 YOU SHOULD NEVER NEED TO MODIFY PARAMETERS FOR PREVIOUS MODEL VERSIONS, ONLY CURRENT MODEL VERSION AND VERSIONS GOING FORWARD!
 
@@ -71,13 +68,7 @@ Run dark_trend.pro and format_for_steve.pro to obtain the new plots (or get new 
 Send the new plots, an updated iris_dark_trend_fix.pro, and tentative report to the local dark pedestal curator (probably you)
 When the report is approved send it to iris_calib, attach new iris_dark_trend_fix_VXX.pro if model has changed
 
-To create a new model separation, update the parameters in the fit_ports_gui python file and the iris_dark_trend_fix files:
-
-Optimize and lock in (never change) the parameters for the current model
-Create a new Model_X_parameters.txt file for the new parameters
-Create a new entry in the fit_ports_gui file to read in the new parameters and a time for the switch to happen
-Create the new model below the previous one in the GUI file, run to ensure everything looks correct
-Match the format in the iris_dark_trend_fix file to start with the new model at the chosen time
+See the README in the python Gui fits folder for detailed instructions on creating a new model segment. 
 
 
 run_dark_checks.csh

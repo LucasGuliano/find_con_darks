@@ -72,7 +72,7 @@ def request_dates(span=15):
 
 
 
-def check_date(date,irisweb='http://iris.lmsal.com/health-safety/timeline/iris_tim_archive/{2}/IRIS_science_timeline_{0}.V{1:2d}.txt'):
+def check_date(date,irisweb='https://iris.lmsal.com/health-safety/timeline/iris_tim_archive/{2}/IRIS_science_timeline_{0}.V{1:2d}.txt'):
     """
     Check date for IRIS dark observations
 
@@ -131,7 +131,7 @@ def check_date(date,irisweb='http://iris.lmsal.com/health-safety/timeline/iris_t
     timeline = res.read()
 
     #make sure timeline is not in byte format, which happens in python3
-    timeline = timeline.decode('utf-8')
+    #timeline = timeline.decode('utf-8')
 
     #check if the timeline has the simpleb obsid
     has_darks = obsid in timeline
@@ -161,15 +161,15 @@ def main():
     check = prev.readlines()
 
     #Get dates which have dark observations
-    events = request_dates(span=15)
-
+    events = request_dates(span=25)
+    
     #set up so you only get the last event
     found = False
     for start in events:
         out = start.split('/')
         # do the check to make sure the files are not already processed
         checkd = out[0]+'/'+out[1]+'/'+out[2]+"\n"
-        if checkd  in check: 
+        if checkd  in check:
             sys.stdout.write('FAILED, ALREADY PROCESSED THIS MONTHS DARKS')
             outc = 1
             return outc

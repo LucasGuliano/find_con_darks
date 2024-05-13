@@ -81,7 +81,7 @@ pro find_con_darks_no_thread,month,yeari,sdir=sdir,simpleb=simpleb,complexa=comp
         f_results = []
 ;Check the sig level for each file
         for j=0, nFiles-1 do begin
-           filetodo = filelist[j]
+           filetodo = filelist[j]         
            check_sig_level,filetodo,pass,endfile,timfile,total5,exptime
            ;Save values
            cpl += pass

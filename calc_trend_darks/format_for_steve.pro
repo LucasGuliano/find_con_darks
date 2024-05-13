@@ -24,9 +24,6 @@ pro format_for_steve
 
         ccdtyp = where(strmatch(basicf,type[i]+'*',/FOLD_CASE) eq 1)
 
- 
-
-
         get_binned_iris_dark_trend,avepix[*,ccdtyp],time[ccdtyp],gropave,gropsig,groptim
 
         if type[i] eq 'NUV' then begin 
@@ -87,8 +84,6 @@ pro format_for_steve
         spanarray = spanarray*24.*3600.
 
 
-
-       print,'HERE 2'
        yrange= [-5,20]
        if type[i] eq 'NUV' then yrange=[-3,6]
 

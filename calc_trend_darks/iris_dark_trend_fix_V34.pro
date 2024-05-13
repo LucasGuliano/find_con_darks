@@ -1,5 +1,5 @@
 
-pro iris_dark_trend_fix, obstime, offsets, type, progver = progver
+pro iris_dark_trend_fix, index, offsets,  progver = progver
 
 ; ============================================================================
 ;+
@@ -164,31 +164,30 @@ progver = 'v2022.Jul.22' ;--- (Guliano) V29 (All Ports): MAJOR CHANGE TO DARK MO
 ;                                    DATA WILL NO LONGER BE ADJUSTED.
 ; Data from 2022/07/09 onward (Model B) was fitted with a new and simplified model that 
 ; will continue to be adjusted moving forward. Returns to simple model
-; with original 8 parameters and modifier parameters were removed
+; with original 8 parameters and modifier parameters were removed                                  
 progver = 'v2023.Jan.20' ;--- (Guliano) V30 (All Ports): Model C was created to cover data from 2022. 
 ;                                       Utilizes data from 2020/07/09
 ;                                       through 12/2022. Model B now
 ;                                       stops at 2021/12/31. New
-;                                       parameters for Model C added.    
-progver = 'v2023.June.01' ;--- (Guliano) V31 (All Ports): First, model C was updated to run from 01/01/2022 to 11/01/2022 for better fit. A new model D was created to cover from that date forward with all ports being updated to reflect a decrease seen across the ports.   ;
-progver = 'v2023.Aug.11' ;--- (Guliano) V32 (All Ports): Minor adjustments to all ports due to larger than expected decrease.   
+;                                       parameters for Model C added.   
+progver = 'v2023.Jun.01' ;--- (Guliano) V31 (All Ports): First, model C was updated to run from 01/01/2022 to 11/01/2022 for better fit. A new model D was created to cover from that date forward with all ports being updated to reflect a decrease seen across the ports.   ;
+;
+progver = 'v2023.Aug.11' ;--- (Guliano) V32 (All Ports): Minor adjustments to all ports due to larger than expected decrease.  
 ;
 progver = 'v2024.Jan.10' ;--- (Guliano) V33 (All Ports): Improved all fit parameters of all ports to match the downward trend of the fit. Improved fit between locking of the model due to large disagreement.;
 ;  
 progver = 'v2024.April.01' ;--- (Guliano) V34 (All Ports): Model D locked in for data 2022/11 through 2023/12 
 ;                                       Utilizes data from
 ;                                       2021-2023. Model E created to
-;                                       start 2024                                
+;                                       start 2024                        
 ; ============================================================================                                                 ;
 ;-
 ; ============================================================================ 
 
 
-;ins = index.instrume ne 'FUV'
-ins = type ne 'FUV'
+ins = index.instrume ne 'FUV'
 
 k=indgen(4)  + ins*4                          
-
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;                              ******MODEL A**********
@@ -239,6 +238,7 @@ endif else begin                          ; if NUV/SJI
    dtq0 = 7e7                               ; start time, quad term
    tq_end = 1.295e8                               ; end time, quad term
 endelse
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;                              ******MODEL B**********
@@ -310,7 +310,7 @@ if ins eq 0 then begin                     ; if FUV, load up variables
    C_lin= [C_fuv1(5),C_fuv2(5),C_fuv3(5),C_fuv4(5)] ; linear long-term trend
    C_quad=[C_fuv1(6),C_fuv2(6),C_fuv3(6),C_fuv4(6)]  ;  quadratic term
    C_off= [C_fuv1(7),C_fuv2(7),C_fuv3(7),C_fuv4(7)]   ; offset constant
-   ;STARTING TIME FOR MODEL B
+   ;STARTING TIME FOR MODEL C
    Model_C_Start  = 1.3569984e+09 ;2022/01/01 12:00am
 
 ;NUV for Model C
@@ -430,8 +430,8 @@ fix2021  = 1.33865e+09
 t0=[1090654728d0,1089963933d0,1090041516d0,1090041516d0,1090037115d0, $ 
      1090037115d0,1090037185d0,1090037185d0]     ; zero epoch
 
-;t=anytim(index.date_obs)
-t=anytim(obstime)
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+t=anytim(index.date_obs)
 
 c=2*!pi
 
@@ -453,7 +453,7 @@ adj = 1.0 - tred*(1.0-A_scl)         ; rescale at trend change boundary:
 toff = (1.0-A_scl)*(A_quad*(tq_end-dtq0)^2+A_lin*tq_end)+A_off ; new boundary value 
 A_off = A_off*(tred ne 1) + toff*tred  ; apply new boundary when t>tq_end
 
-model_a_offsets = A_amp1 *sin(c*(dt0/A_p1 + A_phi1)) +  $
+model_A_offsets = A_amp1 *sin(c*(dt0/A_p1 + A_phi1)) +  $
            A_amp2 *sin(c*(dt0/(A_p1/2) + A_phi2)) +  $
            A_lin*adj*dt0  + adj*A_quad*dtq^2 + A_off 
 
@@ -470,7 +470,7 @@ incs_amplit_june2018 = ((A_amp1*sin(c*(dt0/A_p1+A_phi1)))+(A_amp2*sin(c*(dt0/(A_
 post_ns = dt0 ge nsdec152018-t0[k]
 
 ;Add new bake out scaling to trend
-model_a_offsets = (drop_offset_june2018+incs_amplit_june2018)*post_bo+model_a_offsets
+model_A_offsets = (drop_offset_june2018+incs_amplit_june2018)*post_bo+model_A_offsets
 
 ;Add non-standard IRIS operations change in pedestal level to the trend
 ;Oct. 27-Dec. 15
@@ -514,21 +514,10 @@ model_C_time = (dt0 ge model_C_start - t0[k]) and (dt0 lt model_D_start - t0[k])
 model_D_time = (dt0 ge model_D_start - t0[k]) and (dt0 lt model_E_start - t0[k])
 model_E_time = (dt0 ge model_E_start - t0[k])
 
-;will be 1 for correct model and 0 for incorect
+;model_X_time will be 1 for correct model and 0 for incorect
 ;creating a final offsets array using only correct models
-offsets =  (model_A_offsets*model_A_time) + (model_B_offsets*model_B_time) + (model_C_offsets*model_C_time) + (model_D_offsets*model_D_time)  + (model_E_offsets*model_E_time)
+offsets =  (model_A_offsets*model_A_time) + (model_B_offsets*model_B_time) + (model_C_offsets*model_C_time) + (model_D_offsets*model_D_time) + (model_E_offsets*model_E_time)
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;Turn this one for offset_printing
-; USE THIS FORMAT TO RUN
-;iris_dark_trend_fix, '2021/12/31T23:59:01', off, 'FUV'
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-;print, 'Model_D'
-;print, model_E_time
-print, offsets
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 return
 end
 ;
